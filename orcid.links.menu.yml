@@ -1,0 +1,5 @@
+orcid.admin_settings:
+  title: ORCID API
+  description: 'Configure ORCID API.'
+  route_name: orcid.admin_settings
+  parent: system.admin_config_services

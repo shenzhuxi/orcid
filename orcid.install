@@ -1,0 +1,29 @@
+<?php
+/**
+ * Implements hook_schema().
+ */
+function orcid_schema() {
+  $schema['orcid'] = array(
+    'fields' => array(
+      'uid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'orcid' => array(
+        'type' => 'varchar',
+        'length' => 19,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('orcid'),
+    'indexes' => array(
+      'orcid' => array('orcid'),
+      'uid' => array('uid'),
+    ),
+    'foreign keys' => array(
+      'uid' => array('users' => 'uid'),
+    ),
+  );
+  return $schema;
+}

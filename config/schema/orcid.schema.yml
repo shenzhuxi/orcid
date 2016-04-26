@@ -1,0 +1,10 @@
+orcid.config:
+  type: config_object
+  label: 'Orcid config'
+  mapping:
+    client_id:
+      type: text
+      label: 'Client ID'
+    client_secret:
+      type: text
+      label: 'Client Secret'

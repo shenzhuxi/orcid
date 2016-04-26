@@ -1,0 +1,5 @@
+name = ORCID
+description = Allow new users to create account and login with ORCID OAUTH2. Allow registered users to associated their account with their ORCID.
+core = 7.x
+
+files[] = includes/orcid.admin.inc

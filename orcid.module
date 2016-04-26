@@ -1,0 +1,34 @@
+<?php
+use Drupal\Core\Database\Database;
+use Drupal\Core\Link;
+use Drupal\Core\Url;
+
+/**
+ * Implements hook_form_alter().
+ */
+function orcid_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+
+    if($form) {
+
+    }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function orcid_form_user_login_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+    $current_url = Url::fromRoute('<current>', array(), array('absolute' => TRUE))->toString();
+    $url = Url::fromRoute('orcid.oauth_redirect', array('redirect' => $current_url));
+    $form['orcid'] = array(
+        '#markup' => Link::fromTextAndUrl(t('Login with ORCID'), $url)->toString(),
+    );
+}
+
+function orcid_user_delete($account) {
+    if ($account->id()) {
+        $query = Database::getConnection()
+            ->delete('orcid')
+            ->condition('uid', $account->id(), '=')
+            ->execute();
+    }
+}
