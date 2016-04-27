@@ -9,8 +9,25 @@ use Drupal\Core\Controller\ControllerBase;
 
 class OauthController extends ControllerBase
 {
+    public function finish($text = '') {
+        $destination = $_SESSION['orcid']['destination'];
+        if (isset($destination)) {
+            $response = new TrustedRedirectResponse($destination);
+            drupal_set_message(t($text));
+            unset($_SESSION['orcid']['destination']);
+            return $response;
+        }
+        $element = array(
+            '#markup' => t($text),
+        );
+        return $element;
+    }
+
     public function redirectPage() {
-        $element = array();
+        if (isset($_GET['destination'])) {
+            $_SESSION['orcid']['destination'] = $_GET['destination'];
+        }
+
         $config = \Drupal::config('orcid.settings');
         //http://members.orcid.org/api/tokens-through-3-legged-oauth-authorization
         //Public API only at this moment
@@ -22,27 +39,20 @@ class OauthController extends ControllerBase
             'urlAccessToken'          => 'https://pub.orcid.org/oauth/token',
             'urlResourceOwnerDetails' => 'http://pub.orcid.org/v1.2'
         ]);
-        $provider = new \League\OAuth2\Client\Provider\GenericProvider([
-            'clientId'                => $config->get('client_id'),    // The client ID assigned to you by the provider
-            'clientSecret'            => $config->get('client_secret'),   // The client password assigned to you by the provider
-            'redirectUri'             => Url::fromUri('base:/orcid/oauth', array('absolute' => TRUE))->toString(),
-            'urlAuthorize'            => 'https://sandbox.orcid.org/oauth/authorize',
-            'urlAccessToken'          => 'https://pub.sandbox.orcid.org/oauth/token',
-            'urlResourceOwnerDetails' => 'http://pub.sandbox.orcid.org/v1.2'
-        ]);
+
         if (!isset($_GET['code'])) {
             $options = [
                 'scope' => ['/authenticate']
             ];
             $authorizationUrl = $provider->getAuthorizationUrl($options);
-            //$_SESSION['oauth2state'] = $provider->getState();
+//            $_SESSION['orchid']['state'] = $provider->getState();
             $response = new TrustedRedirectResponse($authorizationUrl);
             return $response;
             //header('Location: ' . $authorizationUrl);
             //exit;
         }
-/*        elseif (empty($_GET['state']) || ($_GET['state'] !== $_SESSION['oauth2state'])) {
-            unset($_SESSION['oauth2state']);
+/*        elseif (empty($_GET['state']) || ($_GET['state'] !== $_SESSION['orchid']['state'])) {
+            unset($_SESSION['orchid']['state']);
         }*/
         try {
             $accessToken = $provider->getAccessToken('authorization_code', [
@@ -50,6 +60,7 @@ class OauthController extends ControllerBase
             ]);
 
             $token = $accessToken->getToken();
+//            $_SESSION['orchid']['token'] = $token;
             $values = $accessToken->getValues();
             $account = \Drupal::currentUser()->getAccount();
 
@@ -66,19 +77,12 @@ class OauthController extends ControllerBase
                 if ($account->id() == 0) {
                     if ($user = User::load($uid)) {
                         user_login_finalize($user);
-                        $element = array(
-                            '#markup' => 'Login with ORCID OAUTH!',
-                        );
-                        //$response = new RedirectResponse($_GET['redirect']);
-                        return $element;
+                        return $this->finish('You have Logged in with ORCID!');
                     }
                 }
 
                 if ($account->id() == $uid) {//ORCID match UID
-                    $element = array(
-                        '#markup' => 'Your ORCID has been validated!',
-                    );
-                    return $element;
+                    return $this->finish('Your ORCID has been connected!');
                 } else {
                     //TODO: What if user account can't match ORCID record
                 }
@@ -89,29 +93,27 @@ class OauthController extends ControllerBase
                     ->insert('orcid')
                     ->fields(array('orcid' => $values['orcid'], 'uid' => $account->id()))
                     ->execute();
-                $element = array(
-                    '#markup' => 'Your ORCID has been connected with your account!',
-                );
-                return $element;
+                return $this->finish('Your ORCID has been connected!');
             }
             //New user with New ORCID
             if ($account->id() == 0) {
-                $user = User::create(array(
+                $new_user = array(
                     'name' => $values['orcid'] . '@' . $token,
                     'mail' => '',
                     'pass' => $token,
                     'status' => 1,
-                ));
+                );
+                if ($config->get('name_field')) {
+                    $new_user[$config->get('name_field')] = $values['name'];
+                }
+                $user = User::create($new_user);
                 $user->save();
                 $query = Database::getConnection()
                     ->insert('orcid')
                     ->fields(array('orcid' => $values['orcid'], 'uid' => $user->id()))
                     ->execute();
                 user_login_finalize($user);
-                $element = array(
-                    '#markup' => 'Account has been created with your ORCID!',
-                );
-                return $element;
+                return $this->finish('Your account has been created with your ORCID!');
             }
             /*
             $message .= $accessToken->getRefreshToken() . "\n";
@@ -123,6 +125,6 @@ class OauthController extends ControllerBase
             \Drupal::logger('orcid')->error($e->getMessage());
             //exit($e->getMessage());
         }
-        return $element;
+        return $this->finish('Failed!');
     }
 }
