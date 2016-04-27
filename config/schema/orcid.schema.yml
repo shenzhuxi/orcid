@@ -8,3 +8,6 @@ orcid.config:
     client_secret:
       type: text
       label: 'Client Secret'
+    name_field:
+      type: text
+      label: 'Name Field'
