@@ -8,7 +8,7 @@ orcid.admin_settings:
 orcid.oauth_redirect:
   path: '/orcid/oauth'
   defaults:
-    _title: 'ORCID OAUTH'
+    _title: 'ORCID OAuth2'
     _controller: '\Drupal\orcid\Controller\OauthController::redirectPage'
   requirements:
     _access: 'TRUE'

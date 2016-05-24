@@ -1,6 +1,6 @@
 type: module
 name: 'ORCID'
-description: 'Allow new users to create account and login with ORCID OAUTH2. Allow registered users to connect their ORCID with their account.'
+description: 'Allow new users to create account and login with ORCID OAuth2. Allow registered users to connect their ORCID with their account.'
 core: 8.x
 package: ORCID
 configure: orcid.admin_settings

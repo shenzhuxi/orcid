@@ -11,21 +11,41 @@ use Drupal\User\UserInterface;
  * Implements hook_form_FORM_ID_alter().
  */
 function orcid_form_user_login_form_alter(&$form, FormStateInterface $form_state, $form_id) {
-    $current_url = Url::fromRoute('<current>', array(), array('absolute' => TRUE))->toString();
-    $url = Url::fromRoute('orcid.oauth_redirect', array('destination' => $current_url));
-    $link = Link::fromTextAndUrl(t('Connect your ORCID iD'), $url);
+  $current_url = Url::fromRoute('<current>', array(), array('absolute' => TRUE))
+    ->toString();
+  $url = Url::fromRoute('orcid.oauth_redirect', array('destination' => $current_url));
+  $link = Link::fromTextAndUrl(t('Connect your ORCID iD'), $url);
 
-    //https://members.orcid.org/logos-web-graphics
-    $button = array(
-        '#markup' => '<button id="connect-orcid-button"><img id="orcid-id-logo" src="http://orcid.org/sites/default/files/images/orcid_24x24.png" width=\'24\' height=\'24\' alt="ORCID logo"/>>Create or Connect your ORCID iD</button>',
-        '#type' => '#markup',
-        '#allowed_tags' => ['button', 'img', 'a'],
-    );
-    $form['orcid'] = array(
-        '#markup' => '<div><img src="http://orcid.org/sites/default/files/images/orcid_16x16.png">' . $link->toString() . '</div>',
-        //'#markup' => render($button),
-    );
-    //$form['#attached']['library'][] = 'orcid/orcid';
+  //https://members.orcid.org/logos-web-graphics
+  $button = array(
+    '#markup' => '<button id="connect-orcid-button"><img id="orcid-id-logo" src="http://orcid.org/sites/default/files/images/orcid_24x24.png" width=\'24\' height=\'24\' alt="ORCID logo"/>Create or Connect your ORCID iD</button>',
+    '#type' => '#markup',
+    '#allowed_tags' => ['button', 'img', 'a'],
+  );
+  $form['orcid'] = array(
+    '#markup' => '<div><img src="http://orcid.org/sites/default/files/images/orcid_16x16.png">' . $link->toString() . '</div>',
+    //'#markup' => render($button),
+  );
+  //$form['#attached']['library'][] = 'orcid/orcid';
+}
+
+function orcid_entity_extra_field_info() {
+  $extra_fields = array(
+    'user' => array(
+      'user' => array(
+        'display' => array(
+          'orcid' => array(
+            'label' => t('ORCID'),
+            'description' => "User's unique ORCID identifier",
+            'weight' => 0,
+            'visible' => true,
+            //'render_class' => 'full\qualified\namespace\RenderClass',
+          ),
+        ),
+      ),
+    ),
+  );
+  return $extra_fields;
 }
 
 /**
@@ -35,45 +55,53 @@ function orcid_form_user_login_form_alter(&$form, FormStateInterface $form_state
  * accessibility.
  */
 function orcid_user_view_alter(array &$build, UserInterface $account, EntityViewDisplayInterface $display) {
-    $id = orcid_load_id($account);
-    if ($display->id() == 'user.user.default') {
-        if ($id) {
-            //https://members.orcid.org/logos-web-graphics
-            $uri = 'http://orcid.org/' . $id;
-            $url = Url::fromUri($uri, array('absolute' => TRUE));
-            $link = Link::fromTextAndUrl($uri, $url)->toString();
-        } else {
-            $current_url = Url::fromRoute('<current>', array(), array('absolute' => TRUE))->toString();
-            $url = Url::fromRoute('orcid.oauth_redirect', array('destination' => $current_url));
-            $link = Link::fromTextAndUrl(t('Connect your ORCID iD'), $url)->toString();
-        }
-        $build['orcid'] = array(
-            '#type' => 'item',
-            '#markup' => '<div><img src="http://orcid.org/sites/default/files/images/orcid_16x16.png">' . $link . '</div>',
-            '#weight' => -50,
-        );
+  $id = orcid_load_id($account);
+  $orcid_display = $display->getComponent('orcid');
+  if ($orcid_display) {
+    if ($id) {
+      //https://members.orcid.org/logos-web-graphics
+      $uri = 'http://orcid.org/' . $id;
+      $url = Url::fromUri($uri, array('absolute' => TRUE));
+      $link = Link::fromTextAndUrl($uri, $url)->toString();
     }
+    else {
+      $current_url = Url::fromRoute('<current>', array(), array('absolute' => TRUE))
+        ->toString();
+      $url = Url::fromRoute('orcid.oauth_redirect', array('destination' => $current_url));
+      $link = Link::fromTextAndUrl(t('Connect your ORCID iD'), $url)
+        ->toString();
+    }
+    $build['orcid'] = array(
+      '#type' => 'item',
+      '#markup' => '<div><img src="http://orcid.org/sites/default/files/images/orcid_16x16.png">' . $link . '</div>',
+      '#weight' => $orcid_display['weight'],
+    );
+  }
 }
+
+/**
+ * Implements hook_ENTITY_TYPE_delete().
+ */
+function orcid_delete_user($account) {
+  if ($account->id()) {
+    $query = Database::getConnection()
+      ->delete('orcid')
+      ->condition('uid', $account->id(), '=')
+      ->execute();
+  }
+}
+
 
 function orcid_load_id($account) {
-    if ($account->id()) {
-        $query = Database::getConnection()
-            ->select('orcid', 'o')
-            ->fields('o', array('orcid'))
-            ->condition('uid', $account->id(), '=');
-        $result = $query->execute();
-        foreach ($result as $item) {
-            return $item->orcid;
-        }
+  if ($account->id()) {
+    $query = Database::getConnection()
+      ->select('orcid', 'o')
+      ->fields('o', array('orcid'))
+      ->condition('uid', $account->id(), '=');
+    $result = $query->execute();
+    foreach ($result as $item) {
+      return $item->orcid;
     }
-    return false;
-}
-
-function orcid_delete_user($account) {
-    if ($account->id()) {
-        $query = Database::getConnection()
-            ->delete('orcid')
-            ->condition('uid', $account->id(), '=')
-            ->execute();
-    }
+  }
+  return FALSE;
 }

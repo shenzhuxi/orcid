@@ -1,8 +1,8 @@
 {
-    "name": "drupal/orcid",
-    "description": "Allow new users to create account and login with ORCID OAUTH2. Allow registered users to associated their account with their ORCID.",
-    "type": "drupal-module",
-    "require": {
-        "league/oauth2-client": "^1.4"
-    }
+  "name": "drupal/orcid",
+  "description": "Allow new users to create account and login with ORCID OAuth2. Allow registered users to associated their account with their ORCID.",
+  "type": "drupal-module",
+  "require": {
+    "league/oauth2-client": "^1.4"
+  }
 }
