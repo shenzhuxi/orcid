@@ -8,25 +8,31 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\User\UserInterface;
 
 /**
+ * Implements hook_requirements().
+ */
+function orcid_requirements($phase) {
+  $requirements = [];
+  if ($phase == 'install') {
+    if (!class_exists('League\OAuth2\Client\Provider\GenericProvider')) {
+      $requirements['oauth2-client'] = [
+        'description' => t('ORCID module requires the thephpleague/oauth2-client library.'),
+        'severity' => REQUIREMENT_ERROR,
+      ];
+    }
+    return $requirements;
+  }
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  */
 function orcid_form_user_login_form_alter(&$form, FormStateInterface $form_state, $form_id) {
-  $current_url = Url::fromRoute('<current>', array(), array('absolute' => TRUE))
-    ->toString();
-  $url = Url::fromRoute('orcid.oauth_redirect', array('destination' => $current_url));
-  $link = Link::fromTextAndUrl(t('Connect your ORCID iD'), $url);
-
-  //https://members.orcid.org/logos-web-graphics
-  $button = array(
-    '#markup' => '<button id="connect-orcid-button"><img id="orcid-id-logo" src="http://orcid.org/sites/default/files/images/orcid_24x24.png" width=\'24\' height=\'24\' alt="ORCID logo"/>Create or Connect your ORCID iD</button>',
-    '#type' => '#markup',
-    '#allowed_tags' => ['button', 'img', 'a'],
-  );
-  $form['orcid'] = array(
-    '#markup' => '<div><img src="http://orcid.org/sites/default/files/images/orcid_16x16.png">' . $link->toString() . '</div>',
-    //'#markup' => render($button),
-  );
-  //$form['#attached']['library'][] = 'orcid/orcid';
+  $link = orcid_oath_link();
+  if ($link) {
+    $form['orcid'] = array(
+      '#markup' => '<div><img src="http://orcid.org/sites/default/files/images/orcid_16x16.png">' . $link . '</div>',
+    );
+  }
 }
 
 function orcid_entity_extra_field_info() {
@@ -38,7 +44,7 @@ function orcid_entity_extra_field_info() {
             'label' => t('ORCID'),
             'description' => "User's unique ORCID identifier",
             'weight' => 0,
-            'visible' => true,
+            'visible' => FALSE,
             //'render_class' => 'full\qualified\namespace\RenderClass',
           ),
         ),
@@ -65,17 +71,15 @@ function orcid_user_view_alter(array &$build, UserInterface $account, EntityView
       $link = Link::fromTextAndUrl($uri, $url)->toString();
     }
     else {
-      $current_url = Url::fromRoute('<current>', array(), array('absolute' => TRUE))
-        ->toString();
-      $url = Url::fromRoute('orcid.oauth_redirect', array('destination' => $current_url));
-      $link = Link::fromTextAndUrl(t('Connect your ORCID iD'), $url)
-        ->toString();
+      $link = orcid_oath_link();
     }
-    $build['orcid'] = array(
-      '#type' => 'item',
-      '#markup' => '<div><img src="http://orcid.org/sites/default/files/images/orcid_16x16.png">' . $link . '</div>',
-      '#weight' => $orcid_display['weight'],
-    );
+    if ($link) {
+      $build['orcid'] = array(
+        '#type' => 'item',
+        '#markup' => '<div><img src="http://orcid.org/sites/default/files/images/orcid_16x16.png">' . $link . '</div>',
+        '#weight' => $orcid_display['weight'],
+      );
+    }
   }
 }
 
@@ -104,4 +108,19 @@ function orcid_load_id($account) {
     }
   }
   return FALSE;
+}
+
+/**
+ * Implements hook_cache_flush().
+ */
+function orcid_oath_link() {
+  $config =  \Drupal::config('orcid.settings');
+  if ($config->get('client_id') == '' || $config->get('client_secret') == '') {
+    return FALSE;
+  }
+  $current_url = Url::fromRoute('<current>', array(), array('absolute' => TRUE))
+    ->toString();
+  $url = Url::fromRoute('orcid.oauth_redirect', array('destination' => $current_url));
+  $link = Link::fromTextAndUrl(t('Connect your ORCID iD'), $url);
+  return $link->toString();
 }

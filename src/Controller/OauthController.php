@@ -3,9 +3,10 @@ namespace Drupal\orcid\Controller;
 
 use Drupal\Core\Routing\TrustedRedirectResponse;
 use Drupal\Core\Url;
-use Drupal\user\Entity\User;
 use Drupal\Core\Database\Database;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\user\Entity\User;
+use League\OAuth2\Client\Provider\GenericProvider;
 
 class OauthController extends ControllerBase {
   public function finish($text = '') {
@@ -30,7 +31,7 @@ class OauthController extends ControllerBase {
     $config = \Drupal::config('orcid.settings');
     //http://members.orcid.org/api/tokens-through-3-legged-oauth-authorization
     //Public API only at this moment
-    $provider = new \League\OAuth2\Client\Provider\GenericProvider([
+    $provider = new GenericProvider([
       'clientId' => $config->get('client_id'),
       // The client ID assigned to you by the provider
       'clientSecret' => $config->get('client_secret'),
